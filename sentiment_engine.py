@@ -119,7 +119,7 @@ def aggregate_daily_sentiment(df: pd.DataFrame) -> pd.DataFrame:
     df["date"] = pd.to_datetime(df["timestamp"]).dt.date
 
     # Fill missing scores (news articles) with 1 for equal weighting
-    df["weight"] = df["score"].fillna(1).clip(lower=1)
+    df["weight"] = 1
 
     def weighted_mean(group, col, weight_col):
         weights = group[weight_col]
