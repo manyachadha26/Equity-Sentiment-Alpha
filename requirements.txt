@@ -1,12 +1,12 @@
 --extra-index-url https://download.pytorch.org/whl/cpu
-torch==2.1.0+cpu
-requests==2.31.0
-beautifulsoup4==4.12.3
-lxml==4.9.3
-pandas==2.2.2
-numpy==1.26.4
-transformers==4.41.2
-tqdm==4.66.4
-yfinance==0.2.40
-streamlit==1.35.0
-plotly==5.22.0
+torch==2.9.1+cpu
+requests
+beautifulsoup4
+lxml
+pandas
+numpy
+transformers
+tqdm
+yfinance
+streamlit
+plotly
