@@ -11,6 +11,7 @@ import numpy as np
 import yfinance as yf
 from datetime import datetime, timedelta
 import os
+import time
 
 
 # ─────────────────────────────────────────────
@@ -18,34 +19,38 @@ import os
 # ─────────────────────────────────────────────
 
 def fetch_prices(ticker: str, start: str = None, end: str = None) -> pd.DataFrame:
-    """
-    Pulls daily OHLCV data from Yahoo Finance via yfinance.
-    Adds next-day return column for backtesting.
-    """
     if not start:
         start = (datetime.today() - timedelta(days=90)).strftime("%Y-%m-%d")
     if not end:
         end = datetime.today().strftime("%Y-%m-%d")
 
     print(f"[Prices] Fetching {ticker.upper()} from {start} to {end}...")
-    raw = yf.download(ticker, start=start, end=end, progress=False)
 
-    if raw.empty:
-        raise ValueError(f"No price data returned for {ticker}")
+    for attempt in range(3):
+        try:
+            raw = yf.download(ticker, start=start, end=end,
+                              progress=False, timeout=30)
+            if not raw.empty:
+                break
+        except Exception as e:
+            print(f"[Prices] Attempt {attempt+1} failed: {e}")
+            time.sleep(2)
+    else:
+        raise ValueError(f"No price data returned for {ticker} after 3 attempts")
 
     df = raw[["Open", "High", "Low", "Close", "Volume"]].copy()
     df.columns = ["open", "high", "low", "close", "volume"]
+
+    if isinstance(df.columns, pd.MultiIndex):
+        df.columns = df.columns.get_level_values(0).str.lower()
+
     df.index = pd.to_datetime(df.index).date
     df.index.name = "date"
     df = df.reset_index()
-
-    # Core return columns
     df["daily_return"] = df["close"].pct_change()
-    df["next_day_return"] = df["daily_return"].shift(-1)   # this is what we're predicting
+    df["next_day_return"] = df["daily_return"].shift(-1)
     df["log_return"] = np.log(df["close"] / df["close"].shift(1))
     df["next_log_return"] = df["log_return"].shift(-1)
-
-    # Price direction (binary label for classification accuracy metric)
     df["next_day_up"] = (df["next_day_return"] > 0).astype(int)
 
     print(f"[Prices] {len(df)} trading days loaded.")
