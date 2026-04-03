@@ -26,27 +26,44 @@ def fetch_prices(ticker: str, start: str = None, end: str = None) -> pd.DataFram
 
     print(f"[Prices] Fetching {ticker.upper()} from {start} to {end}...")
 
+    # Convert dates to timestamps for Yahoo Finance API
+    import requests as req
+    start_ts = int(datetime.strptime(start, "%Y-%m-%d").timestamp())
+    end_ts = int(datetime.strptime(end, "%Y-%m-%d").timestamp())
+
+    url = (
+        f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}"
+        f"?interval=1d&period1={start_ts}&period2={end_ts}"
+    )
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Accept": "application/json",
+    }
+
     for attempt in range(3):
         try:
-            raw = yf.download(ticker, start=start, end=end,
-                              progress=False, timeout=30)
-            if not raw.empty:
-                break
+            response = req.get(url, headers=headers, timeout=30)
+            data = response.json()
+            result = data["chart"]["result"][0]
+            timestamps = result["timestamp"]
+            ohlcv = result["indicators"]["quote"][0]
+
+            df = pd.DataFrame({
+                "date": [datetime.utcfromtimestamp(t).date() for t in timestamps],
+                "open":   ohlcv["open"],
+                "high":   ohlcv["high"],
+                "low":    ohlcv["low"],
+                "close":  ohlcv["close"],
+                "volume": ohlcv["volume"],
+            })
+            df = df.dropna(subset=["close"])
+            break
         except Exception as e:
             print(f"[Prices] Attempt {attempt+1} failed: {e}")
             time.sleep(2)
     else:
-        raise ValueError(f"No price data returned for {ticker} after 3 attempts")
+        raise ValueError(f"Could not fetch price data for {ticker}")
 
-    df = raw[["Open", "High", "Low", "Close", "Volume"]].copy()
-    df.columns = ["open", "high", "low", "close", "volume"]
-
-    if isinstance(df.columns, pd.MultiIndex):
-        df.columns = df.columns.get_level_values(0).str.lower()
-
-    df.index = pd.to_datetime(df.index).date
-    df.index.name = "date"
-    df = df.reset_index()
     df["daily_return"] = df["close"].pct_change()
     df["next_day_return"] = df["daily_return"].shift(-1)
     df["log_return"] = np.log(df["close"] / df["close"].shift(1))
