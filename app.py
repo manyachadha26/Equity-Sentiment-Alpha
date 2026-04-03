@@ -287,7 +287,6 @@ with st.expander("🔬 Threshold Sensitivity Analysis"):
 with st.expander("📝 Raw Posts & Sentiment Scores"):
     show_df = scored_df[["source", "timestamp", "title", "label", "compound",
                       "positive", "negative", "neutral"]].copy()
-                          "positive", "negative", "neutral", "score"]].copy()
     show_df["timestamp"] = pd.to_datetime(show_df["timestamp"]).dt.strftime("%Y-%m-%d")
 
     label_filter = st.multiselect(
