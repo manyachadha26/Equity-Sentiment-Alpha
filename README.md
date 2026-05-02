@@ -82,5 +82,3 @@ Equity-Sentiment-Alpha/
 
 ---
 
-*Project 1 of my #BuildInPublic challenge — building one real project every 3 days.*
-*Follow along on X for daily updates.*
